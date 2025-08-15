@@ -1,0 +1,46 @@
+//@version=5
+indicator("ADX with Raw ADX-Based Shading", overlay=false)
+
+diLen         = input.int(14, "DI length", minval=1)
+adxSmooth     = input.int(14, "ADX smoothing", minval=1) // still used for plotted ADX line
+maType        = input.string("EMA", "MA type (on ADX)", options=["SMA", "EMA", "WMA"])
+maLen         = input.int(10, "MA length", minval=1)
+keyLevel1     = input.float(25.0, "Key level 1", minval=0.0, maxval=100.0)
+keyLevel2     = input.float(50.0, "Key level 2", minval=0.0, maxval=100.0)
+
+bgBullColor   = input.color(color.new(color.green, 85), "Background Bullish")
+bgBearColor   = input.color(color.new(color.red,   85), "Background Bearish")
+bgNeutralColor= input.color(color.new(color.gray, 90), "Background Neutral")
+
+// Raw +DI, -DI, ADX
+[diPlus, diMinus, adxRaw] = ta.dmi(diLen, adxSmooth)
+
+// MA selector
+ma_on(src, type, len) =>
+    switch type
+        "SMA" => ta.sma(src, len)
+        "EMA" => ta.ema(src, len)
+        "WMA" => ta.wma(src, len)
+
+adxMA = ma_on(adxRaw, maType, maLen)
+
+// Plots
+plot(adxRaw, title="ADX (Raw)", color=color.teal, linewidth=2)
+plot(adxMA,  title="ADX MA",    color=color.orange, linewidth=2)
+plot(diPlus,  title="+DI",      color=color.green)
+plot(diMinus, title="-DI",      color=color.red)
+
+// Key levels
+hline(keyLevel1, "Key level 1", color=color.gray, linestyle=hline.style_dotted)
+hline(keyLevel2, "Key level 2", color=color.gray, linestyle=hline.style_dotted)
+
+// Background shading based on RAW ADX
+isNeutral = adxRaw < keyLevel1
+isBull    = not isNeutral and diPlus > diMinus
+isBear    = not isNeutral and diMinus > diPlus
+
+bgColor = isNeutral ? bgNeutralColor :
+          isBull    ? bgBullColor :
+                      bgBearColor
+
+bgcolor(bgColor)
