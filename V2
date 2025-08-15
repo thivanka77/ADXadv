@@ -1,0 +1,51 @@
+//@version=5
+indicator("ADX + DI Dynamic Shading", overlay=false)
+
+// Inputs
+diLen         = input.int(14,   "DI length",    minval=1)
+adxSmooth     = input.int(14,   "ADX smoothing",minval=1)
+keyLevel1     = input.float(10, "Key level 1",  minval=0, maxval=100)
+keyLevel2     = input.float(25, "Key level 2",  minval=0, maxval=100)  // NEW: purely visual
+
+bgBullColor    = input.color(color.new(color.green, 85), "Bullish Shade")
+bgBearColor    = input.color(color.new(color.red,   85), "Bearish Shade")
+bgNeutralColor = input.color(color.new(color.gray,  90), "Neutral Shade")
+
+// Inputs — MA for ADX
+maType = input.string("EMA", "MA type (on ADX)", options=["SMA", "EMA", "WMA"])
+maLen  = input.int(10, "MA length", minval=1)
+
+
+// Calculate raw DI+ / DI– and ADX
+[diPlus, diMinus, adxRaw] = ta.dmi(diLen, adxSmooth)
+
+// Plot the lines for reference
+plot(adxRaw,    title="RAW ADX", color=color.teal,  linewidth=2)
+plot(diPlus,    title="+DI",     color=color.green, linewidth=1)
+plot(diMinus,   title="-DI",     color=color.red,   linewidth=1)
+
+hline(keyLevel1, "Key Level 1", color=color.gray,  linestyle=hline.style_dotted)
+hline(keyLevel2, "Key Level 2", color=color.orange, linestyle=hline.style_dashed) // NEW visual-only line
+
+// Background shading logic
+color bgColor = bgNeutralColor
+
+if diPlus > diMinus and adxRaw >= keyLevel1
+    bgColor := bgBullColor
+else if diMinus > diPlus and adxRaw >= keyLevel1
+    bgColor := bgBearColor
+else
+    bgColor := bgNeutralColor
+
+bgcolor(bgColor)
+
+// MA dispatcher
+ma_on(src, type, len) =>
+    switch type
+        "SMA" => ta.sma(src, len)
+        "EMA" => ta.ema(src, len)
+        "WMA" => ta.wma(src, len)
+
+// Compute & plot MA of RAW ADX
+adxMA = ma_on(adxRaw, maType, maLen)
+plot(adxMA, title="ADX MA", color=color.orange, linewidth=2)
